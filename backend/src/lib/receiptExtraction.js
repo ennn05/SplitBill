@@ -43,7 +43,10 @@ export async function extractReceipt(imageBuffer, mimeType) {
   }
 
   const response = await getClient().models.generateContent({
-    model: "gemini-2.5-flash",
+    // An alias that always tracks Google's current stable Flash model, rather than a
+    // pinned version - pinned versions get deprecated for new API keys (confirmed
+    // live: gemini-2.5-flash already returns 404 "no longer available to new users").
+    model: "gemini-flash-latest",
     contents: [
       {
         role: "user",
