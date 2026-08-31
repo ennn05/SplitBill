@@ -79,9 +79,14 @@ export function computeBillTotals({ items, claims, participants, taxAmount, serv
   });
   const rawTotals = rawSubtotals.map((s, i) => s + rawExtrasByParticipant[i]);
 
-  const billTotal = billSubtotal + Number(taxAmount) + Number(serviceChargeAmount);
-  const totalCents = allocateCentsByLargestRemainder(rawTotals, billTotal);
-  const subtotalCents = allocateCentsByLargestRemainder(rawSubtotals, billSubtotal);
+  // Reconcile against the sum of what's actually claimed, not the full bill amount -
+  // those only match once every item is fully claimed. Reconciling against the full
+  // bill total while items are still unclaimed would leak phantom cents from nobody's
+  // share onto whichever participant the remainder happened to land on.
+  const claimedSubtotalSum = rawSubtotals.reduce((sum, s) => sum + s, 0);
+  const claimedTotalSum = rawTotals.reduce((sum, t) => sum + t, 0);
+  const totalCents = allocateCentsByLargestRemainder(rawTotals, claimedTotalSum);
+  const subtotalCents = allocateCentsByLargestRemainder(rawSubtotals, claimedSubtotalSum);
 
   const { unresolvedItemIds } = computeItemClaimTotals(items, claims);
 
