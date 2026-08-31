@@ -54,12 +54,15 @@ Both of these are dashboard clicks tied to your own GitHub/Google account — no
 **Web → Vercel**:
 1. [vercel.com/new](https://vercel.com/new) → import this GitHub repo
 2. Set **Root Directory** to `web` (Vercel asks this during import)
-3. Add the env vars from `web/.env.local.example`, with `NEXT_PUBLIC_API_BASE_URL` set to the Render URL from above
-4. Deploy — note the resulting URL (`https://your-app.vercel.app`)
+3. Confirm **Framework Preset** shows **Next.js** in Settings → General — if the repo root was empty at any point during import, Vercel can auto-detect "Other" instead and silently 404 every route despite a successful build. Fix by switching it to Next.js and redeploying.
+4. Add the env vars from `web/.env.local.example`, with `NEXT_PUBLIC_API_BASE_URL` set to the Render URL from above
+5. Deploy — note the resulting URL (`https://your-app.vercel.app`)
 
 **Then wire them together**: go back to Render, set `WEB_APP_URL` to your Vercel URL, and redeploy the backend (Render redeploys automatically on env var changes). This is what CORS and the Socket.io origin check are keyed off of.
 
 **Don't forget Firebase's authorized domains** — Google sign-in will fail on the deployed site with an `unauthorized-domain` error until you add your Vercel URL: Firebase Console → Authentication → Settings → Authorized domains → Add domain.
+
+**Vercel's free tier and commit authorship**: on the Hobby plan, Vercel only auto-deploys commits authored by the account connected to the project. A commit from any other GitHub identity (even a real account, even on your own repo) gets blocked with "Deployment Blocked" unless the repo is public — private-repo collaboration needs Pro. If you see that block, either make the repo public, click **Redeploy** manually each time (bypasses the check), or commit as the account linked to Vercel.
 
 Local file uploads (`backend/src/lib/storage.js`) are saved to `backend/uploads/` and served statically — this doesn't survive a Render redeploy. Swap in a Supabase/Firebase Storage adapter with the same `saveImage(buffer, mimeType) -> url` signature before relying on this in production (see the comment in that file).
 
