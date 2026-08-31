@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/AuthContext";
 
 const FRIENDLY_ERRORS: Record<string, string> = {
   "auth/invalid-credential": "Wrong email or password.",
-  "auth/email-already-in-use": "An account already exists with that email — try signing in instead.",
+  "auth/email-already-in-use":
+    "An account already exists with that email. If you signed up with Google before, use \"Continue with Google\" below instead of a password.",
   "auth/weak-password": "Password must be at least 6 characters.",
   "auth/invalid-email": "That doesn't look like a valid email address.",
 };
