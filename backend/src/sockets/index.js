@@ -60,7 +60,9 @@ export function registerSocketHandlers(io) {
 
       const state = await fetchFullBill(billId);
       if (!state) return sendError(socket, "NOT_FOUND", "Bill not found");
-      socket.emit("bill:state", state);
+      // bill:state is only ever emitted directly to the joining socket (never broadcast),
+      // so it's safe to attach the viewer's own participant id here.
+      socket.emit("bill:state", { ...state, yourParticipantId: identity.participantId });
       socket.to(`bill:${billId}`).emit("participant:joined", {
         participant: state.participants.find((p) => p.id === identity.participantId),
       });

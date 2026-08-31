@@ -7,13 +7,14 @@ export async function fetchFullBill(billId) {
   if (billResult.rows.length === 0) return null;
   const bill = billResult.rows[0];
 
-  const [items, participants, claims] = await Promise.all([
+  const [items, participants, claims, payments] = await Promise.all([
     pool.query("SELECT * FROM items WHERE bill_id = $1 ORDER BY sort_order", [billId]),
     pool.query("SELECT * FROM participants WHERE bill_id = $1 ORDER BY joined_at", [billId]),
     pool.query(
       `SELECT ic.* FROM item_claims ic JOIN items i ON i.id = ic.item_id WHERE i.bill_id = $1`,
       [billId]
     ),
+    pool.query("SELECT * FROM payments WHERE bill_id = $1", [billId]),
   ]);
 
   const totals = computeBillTotals({
@@ -24,5 +25,12 @@ export async function fetchFullBill(billId) {
     serviceChargeAmount: bill.service_charge_amount,
   });
 
-  return { bill, items: items.rows, participants: participants.rows, claims: claims.rows, totals };
+  return {
+    bill,
+    items: items.rows,
+    participants: participants.rows,
+    claims: claims.rows,
+    payments: payments.rows,
+    totals,
+  };
 }

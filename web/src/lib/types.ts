@@ -1,0 +1,87 @@
+export type BillStatus = "draft" | "open" | "locked" | "settled";
+
+export interface Bill {
+  id: string;
+  owner_user_id: string;
+  title: string | null;
+  status: BillStatus;
+  raw_receipt_image_url: string | null;
+  currency: string;
+  subtotal: string;
+  tax_amount: string;
+  service_charge_amount: string;
+  total: string;
+  payment_qr_image_url: string | null;
+  payment_method_type: "bank" | "tng" | null;
+  join_code: string;
+  join_link_token: string;
+  locked_at: string | null;
+  created_at: string;
+}
+
+export interface Item {
+  id: string;
+  bill_id: string;
+  name: string;
+  unit_price: string;
+  quantity: string;
+  raw_line_text: string | null;
+  sort_order: number;
+}
+
+export interface Participant {
+  id: string;
+  bill_id: string;
+  user_id: string | null;
+  guest_name: string | null;
+  is_payer: boolean;
+  joined_at: string;
+}
+
+export interface ItemClaim {
+  id: string;
+  item_id: string;
+  participant_id: string;
+  share_fraction: string;
+}
+
+export interface ParticipantTotal {
+  participantId: string;
+  subtotal: number;
+  taxAndServiceShare: number;
+  total: number;
+}
+
+export interface Payment {
+  id: string;
+  bill_id: string;
+  participant_id: string;
+  amount_owed: string;
+  marked_paid_by_payer: boolean;
+  marked_paid_at: string | null;
+}
+
+export interface BillState {
+  bill: Bill;
+  items: Item[];
+  participants: Participant[];
+  claims: ItemClaim[];
+  payments: Payment[];
+  totals: { unresolvedItemIds: string[]; perParticipant: ParticipantTotal[] };
+}
+
+export interface ExtractedItem {
+  name: string;
+  unit_price: number;
+  quantity: number;
+  raw_line_text?: string;
+}
+
+export interface ExtractedReceipt {
+  items: ExtractedItem[];
+  subtotal: number;
+  tax_amount: number;
+  service_charge_amount: number;
+  total: number;
+  currency?: string;
+}
