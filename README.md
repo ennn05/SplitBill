@@ -17,7 +17,7 @@ You'll need accounts/keys for:
 2. **Firebase project** (payer auth) — create one at the [Firebase console](https://console.firebase.google.com/), enable **Authentication → Google sign-in**, then:
    - For the **backend**: Project settings → Service accounts → generate a private key (gives you `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`).
    - For the **web app**: Project settings → General → your web app's config (gives you `NEXT_PUBLIC_FIREBASE_*` values).
-3. **Anthropic API key** (receipt extraction) — from the [Anthropic console](https://console.anthropic.com/). Required for the receipt-upload feature; nothing else depends on it.
+3. **Gemini API key** (receipt extraction, free) — get one at [Google AI Studio](https://aistudio.google.com/apikey), no card required. The free tier (Gemini 2.5 Flash, a few hundred requests/day) is plenty for this app; only the receipt-upload feature depends on it.
 
 ## Backend setup
 
