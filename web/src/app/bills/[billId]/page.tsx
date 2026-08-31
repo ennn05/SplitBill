@@ -299,9 +299,13 @@ function LiveBillPanel({
       <section className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-4">
         <p className="text-sm text-slate-500">Share this to let people join</p>
         {joinUrl && <QRCodeSVG value={joinUrl} size={140} />}
-        <p className="break-all text-center text-xs text-slate-500">{joinUrl}</p>
-        <p className="text-sm">
+        <div className="flex max-w-full items-center gap-2">
+          <p className="break-all text-center text-xs text-slate-500">{joinUrl}</p>
+          <CopyButton text={joinUrl} />
+        </div>
+        <p className="flex items-center gap-2 text-sm">
           Backup code: <span className="font-mono font-semibold">{bill.join_code}</span>
+          <CopyButton text={bill.join_code} />
         </p>
       </section>
 
@@ -387,5 +391,24 @@ function LiveBillPanel({
 
       {error && <p className="text-sm text-red-600">{error.message}</p>}
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
   );
 }
