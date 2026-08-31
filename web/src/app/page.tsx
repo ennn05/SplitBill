@@ -2,24 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/AuthContext";
-
-const FRIENDLY_ERRORS: Record<string, string> = {
-  "auth/invalid-credential": "Wrong email or password.",
-  "auth/email-already-in-use":
-    "An account already exists with that email. If you signed up with Google before, use \"Continue with Google\" below instead of a password.",
-  "auth/weak-password": "Password must be at least 6 characters.",
-  "auth/invalid-email": "That doesn't look like a valid email address.",
-};
-
-function friendlyError(err: unknown): string {
-  if (err instanceof FirebaseError) return FRIENDLY_ERRORS[err.code] ?? err.message;
-  return err instanceof Error ? err.message : "Something went wrong.";
-}
+import { friendlyAuthError } from "@/lib/authErrors";
 
 export default function LandingPage() {
-  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading, redirectError, signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -32,6 +19,8 @@ export default function LandingPage() {
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
 
+  const displayError = error ?? (redirectError ? friendlyAuthError(redirectError) : null);
+
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -40,7 +29,7 @@ export default function LandingPage() {
       if (mode === "signin") await signIn(email, password);
       else await signUp(email, password);
     } catch (err) {
-      setError(friendlyError(err));
+      setError(friendlyAuthError(err));
       setSubmitting(false);
     }
   }
@@ -51,7 +40,7 @@ export default function LandingPage() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(friendlyError(err));
+      setError(friendlyAuthError(err));
       setSubmitting(false);
     }
   }
@@ -113,7 +102,7 @@ export default function LandingPage() {
         Continue with Google
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {displayError && <p className="text-sm text-red-600">{displayError}</p>}
       <p className="text-xs text-slate-400">Guests joining a bill don&apos;t need an account.</p>
     </main>
   );
