@@ -2,7 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
   type User,
@@ -13,6 +15,8 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   getIdToken: () => Promise<string | null>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -34,6 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     loading,
     getIdToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null)),
+    signIn: async (email, password) => {
+      await signInWithEmailAndPassword(auth, email, password);
+    },
+    signUp: async (email, password) => {
+      await createUserWithEmailAndPassword(auth, email, password);
+    },
     signInWithGoogle: async () => {
       await signInWithPopup(auth, googleProvider);
     },
