@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useBillSocket } from "@/lib/useBillSocket";
 import { getGuestSession } from "@/lib/guestSession";
 import { BillItemsList } from "@/components/BillItemsList";
+import { AdjustmentChat } from "@/components/AdjustmentChat";
 
 export default function GuestBillPage({ params }: { params: Promise<{ billId: string }> }) {
   const { billId } = use(params);
@@ -16,7 +17,10 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
     setGuestToken(getGuestSession(billId)?.guestToken ?? null);
   }, [billId]);
 
-  const { state, error, claimItem, unclaimItem } = useBillSocket(guestToken ? billId : null, guestToken ?? null);
+  const { state, error, claimItem, unclaimItem, proposeAdjustment, reviewAdjustment } = useBillSocket(
+    guestToken ? billId : null,
+    guestToken ?? null
+  );
 
   if (guestToken === undefined) return null;
   if (guestToken === null) {
@@ -52,6 +56,15 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
           onUnclaim={unclaimItem}
         />
       </section>
+
+      <AdjustmentChat
+        adjustments={state.adjustments}
+        participants={state.participants}
+        isPayer={false}
+        error={error}
+        onPropose={proposeAdjustment}
+        onReview={reviewAdjustment}
+      />
 
       {state.bill.payment_qr_image_url && (
         <section className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

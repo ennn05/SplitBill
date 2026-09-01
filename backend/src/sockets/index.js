@@ -199,7 +199,7 @@ export function registerSocketHandlers(io) {
 
       let diff;
       try {
-        diff = await parseAdjustmentInstruction(instructionText, context);
+        diff = await parseAdjustmentInstruction(instructionText, { ...context, requestingParticipantId: participantId });
       } catch (err) {
         return sendError(socket, "ADJUSTMENT_FAILED", `Couldn't process that request: ${err.message}`);
       }

@@ -8,6 +8,7 @@ import { useBillSocket } from "@/lib/useBillSocket";
 import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr, applyDefaultPaymentQr } from "@/lib/api";
 import { unresolvedItems } from "@/lib/claims";
 import { BillItemsList } from "@/components/BillItemsList";
+import { AdjustmentChat } from "@/components/AdjustmentChat";
 import type { BillState, ExtractedItem } from "@/lib/types";
 
 export default function BillPage({ params }: { params: Promise<{ billId: string }> }) {
@@ -346,6 +347,15 @@ function LiveBillPanel({
           onUnclaim={liveActions.unclaimItem}
         />
       </section>
+
+      <AdjustmentChat
+        adjustments={state.adjustments}
+        participants={state.participants}
+        isPayer
+        error={error}
+        onPropose={liveActions.proposeAdjustment}
+        onReview={liveActions.reviewAdjustment}
+      />
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Who owes what</h2>

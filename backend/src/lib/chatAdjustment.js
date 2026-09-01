@@ -45,7 +45,7 @@ const DIFF_SCHEMA = {
  * result before applying it (see lib/applyAdjustment.js) - this function
  * produces a proposal, never a trusted mutation.
  */
-export async function parseAdjustmentInstruction(instructionText, { items, participants }) {
+export async function parseAdjustmentInstruction(instructionText, { items, participants, requestingParticipantId }) {
   const itemsContext = items.map((i) => ({
     id: i.id,
     name: i.name,
@@ -70,6 +70,10 @@ export async function parseAdjustmentInstruction(instructionText, { items, parti
               "You are adjusting item claims on a shared restaurant bill based on a participant's request.",
               `Items on this bill: ${JSON.stringify(itemsContext)}`,
               `Participants on this bill: ${JSON.stringify(participantsContext)}`,
+              // Without this, "me"/"my"/"I" in the request has no referent and the model
+              // has been observed guessing wrong (confirmed live: "give me the coke" from
+              // a guest was once assigned to the payer instead).
+              `The id of the participant making this request is: ${requestingParticipantId}. Resolve "me"/"my"/"I" in the request to this id.`,
               `Request: "${instructionText}"`,
               "Produce a diff that implements this request using only the item and participant ids given above.",
             ].join("\n\n"),

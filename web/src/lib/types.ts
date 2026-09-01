@@ -52,6 +52,20 @@ export interface ParticipantTotal {
   total: number;
 }
 
+export type AdjustmentStatus = "pending" | "approved" | "rejected" | "applied";
+
+export interface Adjustment {
+  id: string;
+  bill_id: string;
+  proposed_by_participant_id: string;
+  instruction_text: string;
+  structured_diff: { operations: unknown[]; summary: string };
+  status: AdjustmentStatus;
+  reviewed_by_participant_id: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
 export interface Payment {
   id: string;
   bill_id: string;
@@ -72,6 +86,7 @@ export interface BillState {
   participants: Participant[];
   claims: ItemClaim[];
   payments: Payment[];
+  adjustments: Adjustment[];
   totals: { unresolvedItemIds: string[]; perParticipant: ParticipantTotal[] };
   payerDefaultPaymentQr: DefaultPaymentQr | null;
 }

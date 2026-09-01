@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE } from "./api";
-import type { BillState, ItemClaim, ParticipantTotal } from "./types";
+import type { Adjustment, BillState, Item, ItemClaim, ParticipantTotal } from "./types";
 
 interface SocketError {
   code: string;
@@ -107,6 +107,42 @@ export function useBillSocket(billId: string | null, token: string | null) {
       setState((prev) => (prev ? { ...prev, bill: { ...prev.bill, status: "locked" } } : prev));
     });
 
+    socket.on("adjustment:proposed", (payload: { adjustment: Adjustment }) => {
+      setState((prev) => (prev ? { ...prev, adjustments: [...prev.adjustments, payload.adjustment] } : prev));
+    });
+
+    socket.on("adjustment:rejected", (payload: { adjustmentId: string }) => {
+      setState((prev) =>
+        prev
+          ? {
+              ...prev,
+              adjustments: prev.adjustments.map((a) =>
+                a.id === payload.adjustmentId ? { ...a, status: "rejected" } : a
+              ),
+            }
+          : prev
+      );
+    });
+
+    socket.on(
+      "adjustment:applied",
+      (payload: { adjustment: Adjustment; updatedState: { items: Item[]; claims: ItemClaim[]; totals: BillState["totals"] } }) => {
+        setState((prev) => {
+          if (!prev) return prev;
+          const adjustments = prev.adjustments.some((a) => a.id === payload.adjustment.id)
+            ? prev.adjustments.map((a) => (a.id === payload.adjustment.id ? payload.adjustment : a))
+            : [...prev.adjustments, payload.adjustment];
+          return {
+            ...prev,
+            adjustments,
+            items: payload.updatedState.items,
+            claims: payload.updatedState.claims,
+            totals: payload.updatedState.totals,
+          };
+        });
+      }
+    );
+
     socket.on("error", (payload: SocketError) => setError(payload));
 
     return () => {
@@ -131,5 +167,23 @@ export function useBillSocket(billId: string | null, token: string | null) {
     socketRef.current?.emit("payment:mark_paid", { participantId });
   }, []);
 
-  return { state, error, connected, claimItem, unclaimItem, lockBill, markPaid };
+  const proposeAdjustment = useCallback((instructionText: string) => {
+    socketRef.current?.emit("chat:propose_adjustment", { instructionText });
+  }, []);
+
+  const reviewAdjustment = useCallback((adjustmentId: string, decision: "approved" | "rejected") => {
+    socketRef.current?.emit("adjustment:review", { adjustmentId, decision });
+  }, []);
+
+  return {
+    state,
+    error,
+    connected,
+    claimItem,
+    unclaimItem,
+    lockBill,
+    markPaid,
+    proposeAdjustment,
+    reviewAdjustment,
+  };
 }
