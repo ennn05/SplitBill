@@ -35,34 +35,40 @@ export default function JoinPage({ params }: { params: Promise<{ code: string }>
   }
 
   if (error && !preview) {
-    return <p className="p-8 text-center text-red-600">{error}</p>;
+    return <p className="p-8 text-center text-red-600 dark:text-red-400">{error}</p>;
   }
   if (!preview) {
-    return <p className="p-8 text-center text-slate-500">Loading…</p>;
+    return <p className="p-8 text-center text-slate-500 dark:text-slate-400">Loading…</p>;
   }
   if (preview.status !== "open") {
-    return <p className="p-8 text-center text-slate-600">This bill isn&apos;t accepting new people right now.</p>;
+    return (
+      <p className="p-8 text-center text-slate-600 dark:text-slate-400">
+        This bill isn&apos;t accepting new people right now.
+      </p>
+    );
   }
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-4 py-10">
       <h1 className="text-xl font-semibold">{preview.title || "Join this bill"}</h1>
-      <p className="text-sm text-slate-500">Enter your name to see the items and claim what&apos;s yours.</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">
+        Enter your name to see the items and claim what&apos;s yours.
+      </p>
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your name"
-        className="rounded border border-slate-300 px-3 py-2 text-sm"
+        className="rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         onKeyDown={(e) => e.key === "Enter" && handleJoin()}
       />
       <button
         onClick={handleJoin}
         disabled={joining || !name.trim()}
-        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
       >
         {joining ? "Joining…" : "Join"}
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </main>
   );
 }

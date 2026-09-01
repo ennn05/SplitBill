@@ -21,12 +21,12 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
   if (guestToken === undefined) return null;
   if (guestToken === null) {
     return (
-      <p className="p-8 text-center text-slate-600">
+      <p className="p-8 text-center text-slate-600 dark:text-slate-400">
         Your session expired. Use the join link or code you were given to rejoin.
       </p>
     );
   }
-  if (!state) return <p className="p-8 text-center text-slate-500">Connecting…</p>;
+  if (!state) return <p className="p-8 text-center text-slate-500 dark:text-slate-400">Connecting…</p>;
 
   const myTotal = state.totals.perParticipant.find((t) => t.participantId === state.yourParticipantId);
   const myPayment = state.payments.find((p) => p.participant_id === state.yourParticipantId);
@@ -42,7 +42,7 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-700">Tap what&apos;s yours</h2>
+        <h2 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Tap what&apos;s yours</h2>
         <BillItemsList
           items={state.items}
           claims={state.claims}
@@ -54,17 +54,17 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
       </section>
 
       {state.bill.payment_qr_image_url && (
-        <section className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-sm text-slate-500">Scan to pay the payer</p>
+        <section className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Scan to pay the payer</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={state.bill.payment_qr_image_url} alt="Payment QR" className="h-48 w-48 object-contain" />
+          <img src={state.bill.payment_qr_image_url} alt="Payment QR" className="h-48 w-48 rounded bg-white object-contain p-2" />
         </section>
       )}
 
       {state.bill.status === "locked" && (
-        <p className="text-center text-sm text-slate-500">This bill is locked — no more changes.</p>
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400">This bill is locked — no more changes.</p>
       )}
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>}
     </main>
   );
 }

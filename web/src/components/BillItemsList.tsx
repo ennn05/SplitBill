@@ -31,7 +31,7 @@ export function BillItemsList({
   const participantsById = new Map(participants.map((p) => [p.id, p]));
 
   return (
-    <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+    <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
       {items.map((item) => {
         const itemClaims = claims.filter((c) => c.item_id === item.id);
         const myClaim = itemClaims.find((c) => c.participant_id === myParticipantId);
@@ -45,7 +45,7 @@ export function BillItemsList({
                 <p className="font-medium">
                   {item.name} {Number(item.quantity) !== 1 && `× ${item.quantity}`}
                 </p>
-                <p className="text-sm text-slate-500">RM {lineTotal.toFixed(2)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">RM {lineTotal.toFixed(2)}</p>
               </div>
               {!readOnly && (
                 <ClaimControl
@@ -58,7 +58,7 @@ export function BillItemsList({
             </div>
 
             {itemClaims.length > 0 && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Claimed by:{" "}
                 {itemClaims
                   .map((c) => {
@@ -95,7 +95,7 @@ function ClaimControl({
     return (
       <button
         onClick={onUnclaim}
-        className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200"
+        className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
       >
         Unclaim
       </button>
@@ -103,7 +103,7 @@ function ClaimControl({
   }
 
   if (fullyClaimed) {
-    return <span className="shrink-0 text-xs text-slate-400">Fully claimed</span>;
+    return <span className="shrink-0 text-xs text-slate-400 dark:text-slate-600">Fully claimed</span>;
   }
 
   return (
@@ -111,7 +111,7 @@ function ClaimControl({
       <select
         value={splitWays}
         onChange={(e) => setSplitWays(Number(e.target.value))}
-        className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs"
+        className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs dark:border-slate-700 dark:bg-slate-800"
       >
         {SPLIT_OPTIONS.map((n) => (
           <option key={n} value={n}>
@@ -121,7 +121,7 @@ function ClaimControl({
       </select>
       <button
         onClick={() => onClaim(1 / splitWays)}
-        className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+        className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
       >
         Claim
       </button>
