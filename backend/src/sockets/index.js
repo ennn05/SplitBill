@@ -2,6 +2,8 @@ import { pool } from "../db/pool.js";
 import { verifyGuestToken, verifyFirebaseToken, hashToken } from "../lib/auth.js";
 import { fetchFullBill } from "../lib/billState.js";
 import { computeItemClaimTotals } from "../lib/totals.js";
+import { parseAdjustmentInstruction } from "../lib/chatAdjustment.js";
+import { validateAdjustmentDiff, applyAdjustmentDiff } from "../lib/applyAdjustment.js";
 
 const EPSILON = 1e-6;
 
@@ -14,6 +16,22 @@ async function broadcastTotals(io, billId) {
   const state = await fetchFullBill(billId);
   if (!state) return;
   io.to(`bill:${billId}`).emit("totals:updated", { perParticipantTotals: state.totals.perParticipant });
+}
+
+/** Applies a validated diff, persists the adjustment's final status, and broadcasts the result to the room. */
+async function applyAndBroadcastAdjustment(io, billId, diff, adjustmentId, reviewerParticipantId) {
+  await applyAdjustmentDiff(billId, diff);
+  await pool.query(
+    `UPDATE bill_adjustments SET status = 'applied', reviewed_by_participant_id = $1, reviewed_at = now() WHERE id = $2`,
+    [reviewerParticipantId, adjustmentId]
+  );
+
+  const state = await fetchFullBill(billId);
+  const adjustment = state.adjustments.find((a) => a.id === adjustmentId);
+  io.to(`bill:${billId}`).emit("adjustment:applied", {
+    adjustment,
+    updatedState: { items: state.items, claims: state.claims, totals: state.totals },
+  });
 }
 
 async function resolveIdentity(billId, token) {
@@ -159,6 +177,97 @@ export function registerSocketHandlers(io) {
       );
 
       io.to(`bill:${billId}`).emit("payment:updated", { participantId, markedPaid: true });
+    });
+
+    socket.on("chat:propose_adjustment", async ({ instructionText }) => {
+      const { billId, participantId, isPayer } = socket.data;
+      if (!billId) return sendError(socket, "UNAUTHENTICATED", "Join the bill first");
+      if (!instructionText || typeof instructionText !== "string" || instructionText.length > 500) {
+        return sendError(socket, "INVALID_INSTRUCTION", "Instruction must be 1-500 characters");
+      }
+
+      const bill = await pool.query("SELECT status FROM bills WHERE id = $1", [billId]);
+      if (bill.rows[0]?.status !== "open") {
+        return sendError(socket, "BILL_NOT_OPEN", "This bill is not accepting adjustments");
+      }
+
+      const [items, participants] = await Promise.all([
+        pool.query("SELECT * FROM items WHERE bill_id = $1", [billId]),
+        pool.query("SELECT * FROM participants WHERE bill_id = $1", [billId]),
+      ]);
+      const context = { items: items.rows, participants: participants.rows };
+
+      let diff;
+      try {
+        diff = await parseAdjustmentInstruction(instructionText, context);
+      } catch (err) {
+        return sendError(socket, "ADJUSTMENT_FAILED", `Couldn't process that request: ${err.message}`);
+      }
+
+      const validation = validateAdjustmentDiff(diff, context);
+      if (!validation.valid) {
+        return sendError(socket, "ADJUSTMENT_INVALID", diff.summary || validation.reason);
+      }
+
+      const inserted = await pool.query(
+        `INSERT INTO bill_adjustments (bill_id, proposed_by_participant_id, instruction_text, structured_diff, status)
+         VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
+        [billId, participantId, instructionText, JSON.stringify(diff)]
+      );
+      const adjustmentId = inserted.rows[0].id;
+
+      if (isPayer) {
+        // Payer-initiated adjustments apply immediately - no approval step needed (SplitBillplan.md Phase 3).
+        await applyAndBroadcastAdjustment(io, billId, diff, adjustmentId, participantId);
+      } else {
+        const state = await fetchFullBill(billId);
+        const adjustment = state.adjustments.find((a) => a.id === adjustmentId);
+        io.to(`bill:${billId}`).emit("adjustment:proposed", { adjustment });
+      }
+    });
+
+    socket.on("adjustment:review", async ({ adjustmentId, decision }) => {
+      const { billId, participantId, isPayer } = socket.data;
+      if (!billId) return sendError(socket, "UNAUTHENTICATED", "Join the bill first");
+      if (!isPayer) return sendError(socket, "FORBIDDEN", "Only the payer can review adjustments");
+      if (decision !== "approved" && decision !== "rejected") {
+        return sendError(socket, "INVALID_DECISION", "decision must be 'approved' or 'rejected'");
+      }
+
+      const pending = await pool.query(
+        "SELECT * FROM bill_adjustments WHERE id = $1 AND bill_id = $2 AND status = 'pending'",
+        [adjustmentId, billId]
+      );
+      if (pending.rows.length === 0) {
+        return sendError(socket, "NOT_FOUND", "No pending adjustment with that id");
+      }
+
+      if (decision === "rejected") {
+        await pool.query(
+          `UPDATE bill_adjustments SET status = 'rejected', reviewed_by_participant_id = $1, reviewed_at = now() WHERE id = $2`,
+          [participantId, adjustmentId]
+        );
+        io.to(`bill:${billId}`).emit("adjustment:rejected", { adjustmentId });
+        return;
+      }
+
+      // Re-validate against current state before approving - claims may have changed since it was proposed.
+      const [items, participants] = await Promise.all([
+        pool.query("SELECT * FROM items WHERE bill_id = $1", [billId]),
+        pool.query("SELECT * FROM participants WHERE bill_id = $1", [billId]),
+      ]);
+      const diff = pending.rows[0].structured_diff;
+      const validation = validateAdjustmentDiff(diff, { items: items.rows, participants: participants.rows });
+      if (!validation.valid) {
+        await pool.query(
+          `UPDATE bill_adjustments SET status = 'rejected', reviewed_by_participant_id = $1, reviewed_at = now() WHERE id = $2`,
+          [participantId, adjustmentId]
+        );
+        io.to(`bill:${billId}`).emit("adjustment:rejected", { adjustmentId });
+        return sendError(socket, "ADJUSTMENT_INVALID", "This adjustment no longer applies - " + validation.reason);
+      }
+
+      await applyAndBroadcastAdjustment(io, billId, diff, adjustmentId, participantId);
     });
   });
 }

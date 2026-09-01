@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type, generateStructuredContent } from "./gemini.js";
 
 const RECEIPT_SCHEMA = {
   type: Type.OBJECT,
@@ -25,12 +25,6 @@ const RECEIPT_SCHEMA = {
   required: ["items", "subtotal", "tax_amount", "service_charge_amount", "total"],
 };
 
-let client;
-function getClient() {
-  if (!client) client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  return client;
-}
-
 /**
  * Extracts structured line items/totals from a receipt image using Gemini's
  * free tier (no card required - see README). This is never trusted as final -
@@ -38,15 +32,14 @@ function getClient() {
  * every extracted field before a bill can be published.
  */
 export async function extractReceipt(imageBuffer, mimeType) {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
-
-  const response = await getClient().models.generateContent({
+  const response = await generateStructuredContent({
     // An alias that always tracks Google's current stable Flash model, rather than a
     // pinned version - pinned versions get deprecated for new API keys (confirmed
     // live: gemini-2.5-flash already returns 404 "no longer available to new users").
+    // Falls back to Flash-Lite if Flash is transiently overloaded (also confirmed live).
     model: "gemini-flash-latest",
+    fallbackModel: "gemini-flash-lite-latest",
+    schema: RECEIPT_SCHEMA,
     contents: [
       {
         role: "user",
@@ -58,10 +51,6 @@ export async function extractReceipt(imageBuffer, mimeType) {
         ],
       },
     ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: RECEIPT_SCHEMA,
-    },
   });
 
   if (!response.text) throw new Error("Model did not return structured receipt data");

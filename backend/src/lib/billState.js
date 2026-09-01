@@ -7,7 +7,7 @@ export async function fetchFullBill(billId) {
   if (billResult.rows.length === 0) return null;
   const bill = billResult.rows[0];
 
-  const [items, participants, claims, payments] = await Promise.all([
+  const [items, participants, claims, payments, adjustments] = await Promise.all([
     pool.query("SELECT * FROM items WHERE bill_id = $1 ORDER BY sort_order", [billId]),
     pool.query("SELECT * FROM participants WHERE bill_id = $1 ORDER BY joined_at", [billId]),
     pool.query(
@@ -15,6 +15,7 @@ export async function fetchFullBill(billId) {
       [billId]
     ),
     pool.query("SELECT * FROM payments WHERE bill_id = $1", [billId]),
+    pool.query("SELECT * FROM bill_adjustments WHERE bill_id = $1 ORDER BY created_at", [billId]),
   ]);
 
   const totals = computeBillTotals({
@@ -31,6 +32,7 @@ export async function fetchFullBill(billId) {
     participants: participants.rows,
     claims: claims.rows,
     payments: payments.rows,
+    adjustments: adjustments.rows,
     totals,
   };
 }
