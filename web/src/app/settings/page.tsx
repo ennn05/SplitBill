@@ -5,22 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { getMe, uploadDefaultPaymentQr } from "@/lib/api";
-import { friendlyAuthError } from "@/lib/authErrors";
 import type { UserProfile } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { user, loading: authLoading, getIdToken, linkPassword } = useAuth();
+  const { user, loading: authLoading, getIdToken } = useAuth();
   const router = useRouter();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [qrMethod, setQrMethod] = useState<"bank" | "tng">("bank");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [newPassword, setNewPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordSaved, setPasswordSaved] = useState(false);
-  const hasPasswordProvider = user?.providerData.some((p) => p.providerId === "password") ?? true;
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
@@ -49,21 +43,6 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : "Failed to upload QR");
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function handleSetPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingPassword(true);
-    setError(null);
-    try {
-      await linkPassword(newPassword);
-      setPasswordSaved(true);
-      setNewPassword("");
-    } catch (err) {
-      setError(friendlyAuthError(err));
-    } finally {
-      setSavingPassword(false);
     }
   }
 
@@ -129,38 +108,6 @@ export default function SettingsPage() {
         )}
 
       </section>
-
-      {!hasPasswordProvider && (
-        <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Add a password</h2>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            Your account only signs in with Google right now. Add a password so you can sign in even if the Google
-            popup is unavailable.
-          </p>
-          {passwordSaved ? (
-            <p className="text-sm text-green-600 dark:text-green-400">Password set — you can now sign in with either method.</p>
-          ) : (
-            <form onSubmit={handleSetPassword} className="flex items-center gap-2">
-              <input
-                type="password"
-                required
-                minLength={6}
-                placeholder="New password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-              />
-              <button
-                type="submit"
-                disabled={savingPassword}
-                className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-              >
-                {savingPassword ? "Saving…" : "Set password"}
-              </button>
-            </form>
-          )}
-        </section>
-      )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </main>

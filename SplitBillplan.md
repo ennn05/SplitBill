@@ -179,7 +179,7 @@ Each bill has its own room: `bill:{bill_id}`. Guests authenticate the socket con
 ## 5. Phased Roadmap
 
 **Phase 1 — Core web app** ✅ done, deployed, and validated end-to-end on real infra (Vercel + Render + Supabase + Firebase + Gemini)
-- Firebase Auth (payer login: Google + email/password) + Next.js scaffold on Vercel
+- Firebase Auth (payer login: email/password) + Next.js scaffold on Vercel — Google sign-in was tried and removed: `signInWithPopup` hit Vercel's default COOP header (fixed), but the underlying popup still didn't complete reliably, and the `signInWithRedirect` fallback is a documented dead end whenever `authDomain` differs from the app's own domain (firebase-js-sdk #7824) without standing up a reverse proxy. Email/password is the sole method going forward.
 - Backend on Render: Postgres schema above, REST endpoints for bills/items/participants/claims
 - Receipt upload → LLM extraction → editable review screen before publishing (rate-limited per user — each upload is a paid LLM call, so this needs abuse protection from day one, not deferred to Phase 4)
 - Join-by-link/code flow for guests (no login, session token)
