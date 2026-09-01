@@ -28,6 +28,15 @@ export async function getBills(idToken: string): Promise<Bill[]> {
   return handle(res);
 }
 
+export async function renameBill(idToken: string, billId: string, title: string): Promise<Bill> {
+  const res = await fetch(`${API_BASE}/api/bills/${billId}/title`, {
+    method: "PATCH",
+    headers: { ...authHeaders(idToken), "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  return handle(res);
+}
+
 export async function getBill(idToken: string, billId: string): Promise<BillState> {
   const res = await fetch(`${API_BASE}/api/bills/${billId}`, { headers: authHeaders(idToken) });
   return handle(res);

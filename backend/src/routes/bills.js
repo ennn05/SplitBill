@@ -23,6 +23,7 @@ const editItemsSchema = z.object({
   total: z.number().nonnegative(),
 });
 const paymentQrSchema = z.object({ methodType: z.enum(["bank", "tng"]) });
+const titleSchema = z.object({ title: z.string().trim().min(1).max(200) });
 
 export default async function billsRoutes(fastify) {
   // List the payer's own bills, newest first - for the dashboard's bill history.
@@ -98,6 +99,18 @@ export default async function billsRoutes(fastify) {
       return reply.send({ bill: updated.rows[0], items: extracted.items });
     }
   );
+
+  // Renaming is allowed regardless of bill status - it's just a label, no claim/total implications.
+  fastify.patch("/api/bills/:billId/title", { preHandler: [requirePayerAuth, requireBillOwner] }, async (request, reply) => {
+    const parsed = titleSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ code: "INVALID_BODY", message: parsed.error.message });
+
+    const updated = await pool.query(`UPDATE bills SET title = $1 WHERE id = $2 RETURNING *`, [
+      parsed.data.title,
+      request.params.billId,
+    ]);
+    return reply.send(updated.rows[0]);
+  });
 
   // Payer reviews/corrects the extracted items before publishing - never auto-published.
   fastify.put("/api/bills/:billId/items", { preHandler: [requirePayerAuth, requireBillOwner] }, async (request, reply) => {

@@ -75,9 +75,12 @@ export function AdjustmentChat({
         </button>
       </form>
 
-      {adjustments.length > 0 && (
+      {adjustments.some((a) => !a.reverted_at) && (
         <ul className="flex flex-col gap-2">
-          {[...adjustments].reverse().map((adj) => (
+          {[...adjustments]
+            .reverse()
+            .filter((adj) => !adj.reverted_at)
+            .map((adj) => (
             <li
               key={adj.id}
               className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-900"
@@ -89,12 +92,8 @@ export function AdjustmentChat({
                   {adj.instruction_text}
                   {"”"}
                 </p>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                    adj.reverted_at ? STATUS_STYLE.rejected : STATUS_STYLE[adj.status]
-                  }`}
-                >
-                  {adj.reverted_at ? "reverted" : adj.status}
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[adj.status]}`}>
+                  {adj.status}
                 </span>
               </div>
               {adj.structured_diff?.summary && (
@@ -116,7 +115,7 @@ export function AdjustmentChat({
                   </button>
                 </div>
               )}
-              {isPayer && adj.status === "applied" && !adj.reverted_at && (
+              {isPayer && adj.status === "applied" && (
                 <button
                   onClick={() => onRevert(adj.id)}
                   className="mt-2 text-xs text-slate-500 hover:underline dark:text-slate-400"

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/AuthContext";
 import { useBillSocket } from "@/lib/useBillSocket";
-import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr, applyDefaultPaymentQr } from "@/lib/api";
+import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr, applyDefaultPaymentQr, renameBill } from "@/lib/api";
 import { unresolvedItems } from "@/lib/claims";
 import { participantLabel } from "@/lib/participant";
 import { BillItemsList } from "@/components/BillItemsList";
@@ -55,7 +55,7 @@ export default function BillPage({ params }: { params: Promise<{ billId: string 
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-10">
-      <h1 className="text-xl font-semibold">{restState.bill.title || "Untitled bill"}</h1>
+      <EditableTitle title={restState.bill.title} idToken={idToken!} billId={billId} onRenamed={refresh} />
       {restError && <p className="text-sm text-red-600 dark:text-red-400">{restError}</p>}
 
       {restState.bill.status === "draft" ? (
@@ -81,6 +81,69 @@ export default function BillPage({ params }: { params: Promise<{ billId: string 
         />
       )}
     </main>
+  );
+}
+
+function EditableTitle({
+  title,
+  idToken,
+  billId,
+  onRenamed,
+}: {
+  title: string | null;
+  idToken: string;
+  billId: string;
+  onRenamed: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(title ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === (title ?? "")) {
+      setEditing(false);
+      setValue(title ?? "");
+      return;
+    }
+    setSaving(true);
+    try {
+      await renameBill(idToken, billId, trimmed);
+      onRenamed();
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        disabled={saving}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+          if (e.key === "Escape") {
+            setValue(title ?? "");
+            setEditing(false);
+          }
+        }}
+        className="rounded border border-slate-300 bg-white px-2 py-1 text-xl font-semibold dark:border-slate-700 dark:bg-slate-900"
+      />
+    );
+  }
+
+  return (
+    <h1
+      onClick={() => setEditing(true)}
+      className="cursor-pointer text-xl font-semibold hover:underline"
+      title="Click to rename"
+    >
+      {title || "Untitled bill"}
+    </h1>
   );
 }
 
