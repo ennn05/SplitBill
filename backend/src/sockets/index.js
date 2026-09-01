@@ -3,6 +3,7 @@ import { verifyGuestToken, verifyFirebaseToken, hashToken } from "../lib/auth.js
 import { fetchFullBill } from "../lib/billState.js";
 import { computeItemClaimTotals } from "../lib/totals.js";
 import { parseAdjustmentInstruction } from "../lib/chatAdjustment.js";
+import { ModelOverloadedError } from "../lib/gemini.js";
 import { validateAdjustmentDiff, applyAdjustmentDiff } from "../lib/applyAdjustment.js";
 
 const EPSILON = 1e-6;
@@ -201,7 +202,8 @@ export function registerSocketHandlers(io) {
       try {
         diff = await parseAdjustmentInstruction(instructionText, { ...context, requestingParticipantId: participantId });
       } catch (err) {
-        return sendError(socket, "ADJUSTMENT_FAILED", `Couldn't process that request: ${err.message}`);
+        const message = err instanceof ModelOverloadedError ? err.message : `Couldn't process that request: ${err.message}`;
+        return sendError(socket, "ADJUSTMENT_FAILED", message);
       }
 
       const validation = validateAdjustmentDiff(diff, context);

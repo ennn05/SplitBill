@@ -3,12 +3,9 @@
 import { useState } from "react";
 import type { Item, ItemClaim, Participant } from "@/lib/types";
 import { claimedFractionByItem, isItemFullyClaimed } from "@/lib/claims";
+import { participantLabel } from "@/lib/participant";
 
 const SPLIT_OPTIONS = [1, 2, 3, 4, 5, 6, 8];
-
-function participantLabel(p: Participant) {
-  return p.is_payer ? `${p.guest_name ?? "Payer"} (payer)` : p.guest_name ?? "Guest";
-}
 
 export function BillItemsList({
   items,

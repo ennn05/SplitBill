@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useBillSocket } from "@/lib/useBillSocket";
 import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr, applyDefaultPaymentQr } from "@/lib/api";
 import { unresolvedItems } from "@/lib/claims";
+import { participantLabel } from "@/lib/participant";
 import { BillItemsList } from "@/components/BillItemsList";
 import { AdjustmentChat } from "@/components/AdjustmentChat";
 import type { BillState, ExtractedItem } from "@/lib/types";
@@ -157,7 +158,7 @@ function DraftEditor({
           accept="image/*"
           disabled={uploading}
           onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-          className="mx-auto text-sm"
+          className="mx-auto text-sm text-slate-500 file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-slate-700 dark:text-slate-400 dark:file:bg-slate-100 dark:file:text-slate-900 dark:hover:file:bg-white"
         />
         {uploading && <p className="text-sm text-slate-500 dark:text-slate-400">Reading receipt…</p>}
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -365,7 +366,7 @@ function LiveBillPanel({
             const paid = paidByParticipant.get(p.id);
             return (
               <li key={p.id} className="flex items-center justify-between p-3 text-sm">
-                <span>{p.guest_name ?? "Payer"}{p.is_payer && " (payer)"}</span>
+                <span>{participantLabel(p)}</span>
                 <span className="flex items-center gap-3">
                   RM {(t?.total ?? 0).toFixed(2)}
                   {!p.is_payer &&
@@ -435,7 +436,7 @@ function LiveBillPanel({
                 accept="image/*"
                 disabled={qrUploading}
                 onChange={(e) => e.target.files?.[0] && handleQrUpload(e.target.files[0])}
-                className="text-sm"
+                className="text-sm text-slate-500 file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-slate-700 dark:text-slate-400 dark:file:bg-slate-100 dark:file:text-slate-900 dark:hover:file:bg-white"
               />
             </div>
             {payerDefaultPaymentQr && (

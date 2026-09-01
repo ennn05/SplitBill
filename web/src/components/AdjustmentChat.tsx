@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Adjustment, Participant } from "@/lib/types";
+import { participantLabel } from "@/lib/participant";
 
 const STATUS_STYLE: Record<Adjustment["status"], string> = {
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
@@ -10,10 +11,9 @@ const STATUS_STYLE: Record<Adjustment["status"], string> = {
   rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
 
-function participantLabel(participants: Participant[], id: string) {
+function participantLabelById(participants: Participant[], id: string) {
   const p = participants.find((p) => p.id === id);
-  if (!p) return "Someone";
-  return p.is_payer ? `${p.guest_name ?? "Payer"} (payer)` : p.guest_name ?? "Guest";
+  return p ? participantLabel(p) : "Someone";
 }
 
 export function AdjustmentChat({
@@ -82,7 +82,7 @@ export function AdjustmentChat({
             >
               <div className="flex items-start justify-between gap-2">
                 <p>
-                  <span className="font-medium">{participantLabel(participants, adj.proposed_by_participant_id)}</span>
+                  <span className="font-medium">{participantLabelById(participants, adj.proposed_by_participant_id)}</span>
                   {": “"}
                   {adj.instruction_text}
                   {"”"}

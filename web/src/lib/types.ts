@@ -36,6 +36,10 @@ export interface Participant {
   guest_name: string | null;
   is_payer: boolean;
   joined_at: string;
+  // The payer's real account name for payer rows (joined server-side from
+  // users.name, since guest_name is only ever set for guest rows) - falls
+  // back to guest_name for guests. Always prefer this over guest_name.
+  display_name: string | null;
 }
 
 export interface ItemClaim {

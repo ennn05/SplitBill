@@ -9,7 +9,12 @@ export async function fetchFullBill(billId) {
 
   const [items, participants, claims, payments, adjustments] = await Promise.all([
     pool.query("SELECT * FROM items WHERE bill_id = $1 ORDER BY sort_order", [billId]),
-    pool.query("SELECT * FROM participants WHERE bill_id = $1 ORDER BY joined_at", [billId]),
+    pool.query(
+      `SELECT p.*, COALESCE(p.guest_name, u.name) AS display_name
+       FROM participants p LEFT JOIN users u ON u.id = p.user_id
+       WHERE p.bill_id = $1 ORDER BY p.joined_at`,
+      [billId]
+    ),
     pool.query(
       `SELECT ic.* FROM item_claims ic JOIN items i ON i.id = ic.item_id WHERE i.bill_id = $1`,
       [billId]

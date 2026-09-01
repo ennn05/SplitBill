@@ -123,7 +123,7 @@ export default function SettingsPage() {
               accept="image/*"
               disabled={uploading}
               onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-              className="text-sm"
+              className="text-sm text-slate-500 file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-slate-700 dark:text-slate-400 dark:file:bg-slate-100 dark:file:text-slate-900 dark:hover:file:bg-white"
             />
           </div>
         )}
