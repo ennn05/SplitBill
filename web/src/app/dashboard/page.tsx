@@ -25,10 +25,19 @@ export default function DashboardPage() {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
+  const [billsError, setBillsError] = useState<string | null>(null);
+
   const loadBills = useCallback(async () => {
-    const idToken = await getIdToken();
-    if (!idToken) return;
-    setBills(await getBills(idToken));
+    setBillsError(null);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) return;
+      setBills(await getBills(idToken));
+    } catch (err) {
+      // An unhandled rejection here would silently leave "Your bills" empty
+      // forever with no indication anything went wrong - surface it instead.
+      setBillsError(err instanceof Error ? err.message : "Failed to load your bills");
+    }
   }, [getIdToken]);
 
   useEffect(() => {
@@ -76,6 +85,14 @@ export default function DashboardPage() {
       </button>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {billsError && (
+        <p className="text-sm text-red-600 dark:text-red-400">
+          {billsError}{" "}
+          <button onClick={loadBills} className="underline">
+            Retry
+          </button>
+        </p>
+      )}
 
       {bills && bills.length > 0 && (
         <section>

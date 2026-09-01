@@ -15,15 +15,23 @@ export default function SettingsPage() {
   const [qrMethod, setQrMethod] = useState<"bank" | "tng">("bank");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
   }, [authLoading, user, router]);
 
   const refresh = useCallback(async () => {
-    const idToken = await getIdToken();
-    if (!idToken) return;
-    setProfile(await getMe(idToken));
+    setLoadError(null);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) return;
+      setProfile(await getMe(idToken));
+    } catch (err) {
+      // Without this, a failed fetch (cold backend, network hiccup) left the
+      // page stuck on "Loading..." forever with zero feedback - confirmed live.
+      setLoadError(err instanceof Error ? err.message : "Failed to load settings");
+    }
   }, [getIdToken]);
 
   useEffect(() => {
@@ -46,7 +54,20 @@ export default function SettingsPage() {
     }
   }
 
-  if (authLoading || !user || !profile) {
+  if (authLoading || !user) return null;
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-8 text-center">
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+        <button onClick={refresh} className="text-sm text-slate-500 hover:underline dark:text-slate-400">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!profile) {
     return <p className="p-8 text-center text-slate-500 dark:text-slate-400">Loading…</p>;
   }
 
