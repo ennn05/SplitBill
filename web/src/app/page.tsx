@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { friendlyAuthError } from "@/lib/authErrors";
 
 export default function LandingPage() {
-  const { user, loading, redirectError, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -18,8 +18,6 @@ export default function LandingPage() {
   useEffect(() => {
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
-
-  const displayError = error ?? (redirectError ? friendlyAuthError(redirectError) : null);
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,7 +100,7 @@ export default function LandingPage() {
         Continue with Google
       </button>
 
-      {displayError && <p className="text-sm text-red-600 dark:text-red-400">{displayError}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <p className="text-xs text-slate-400 dark:text-slate-600">Guests joining a bill don&apos;t need an account.</p>
     </main>
   );
