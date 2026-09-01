@@ -23,6 +23,7 @@ export function AdjustmentChat({
   error,
   onPropose,
   onReview,
+  onRevert,
 }: {
   adjustments: Adjustment[];
   participants: Participant[];
@@ -30,6 +31,7 @@ export function AdjustmentChat({
   error: { code: string; message: string } | null;
   onPropose: (instructionText: string) => void;
   onReview: (adjustmentId: string, decision: "approved" | "rejected") => void;
+  onRevert: (adjustmentId: string) => void;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -87,8 +89,12 @@ export function AdjustmentChat({
                   {adj.instruction_text}
                   {"”"}
                 </p>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[adj.status]}`}>
-                  {adj.status}
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+                    adj.reverted_at ? STATUS_STYLE.rejected : STATUS_STYLE[adj.status]
+                  }`}
+                >
+                  {adj.reverted_at ? "reverted" : adj.status}
                 </span>
               </div>
               {adj.structured_diff?.summary && (
@@ -109,6 +115,14 @@ export function AdjustmentChat({
                     Reject
                   </button>
                 </div>
+              )}
+              {isPayer && adj.status === "applied" && !adj.reverted_at && (
+                <button
+                  onClick={() => onRevert(adj.id)}
+                  className="mt-2 text-xs text-slate-500 hover:underline dark:text-slate-400"
+                >
+                  Revert this change
+                </button>
               )}
             </li>
           ))}

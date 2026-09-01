@@ -17,7 +17,7 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
     setGuestToken(getGuestSession(billId)?.guestToken ?? null);
   }, [billId]);
 
-  const { state, error, claimItem, unclaimItem, proposeAdjustment, reviewAdjustment } = useBillSocket(
+  const { state, error, claimItem, unclaimItem, proposeAdjustment, reviewAdjustment, revertAdjustment } = useBillSocket(
     guestToken ? billId : null,
     guestToken ?? null
   );
@@ -64,6 +64,7 @@ export default function GuestBillPage({ params }: { params: Promise<{ billId: st
         error={error}
         onPropose={proposeAdjustment}
         onReview={reviewAdjustment}
+        onRevert={revertAdjustment}
       />
 
       {state.bill.payment_qr_image_url && (

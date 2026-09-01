@@ -4,7 +4,7 @@ import { fetchFullBill } from "../lib/billState.js";
 import { computeItemClaimTotals } from "../lib/totals.js";
 import { parseAdjustmentInstruction } from "../lib/chatAdjustment.js";
 import { ModelOverloadedError } from "../lib/gemini.js";
-import { validateAdjustmentDiff, applyAdjustmentDiff } from "../lib/applyAdjustment.js";
+import { validateAdjustmentDiff, applyAdjustmentDiff, revertToSnapshot } from "../lib/applyAdjustment.js";
 
 const EPSILON = 1e-6;
 
@@ -19,12 +19,15 @@ async function broadcastTotals(io, billId) {
   io.to(`bill:${billId}`).emit("totals:updated", { perParticipantTotals: state.totals.perParticipant });
 }
 
-/** Applies a validated diff, persists the adjustment's final status, and broadcasts the result to the room. */
+/** Applies a validated diff, persists the adjustment's final status (plus a
+ * before-snapshot for reverting later), and broadcasts the result to the room. */
 async function applyAndBroadcastAdjustment(io, billId, diff, adjustmentId, reviewerParticipantId) {
-  await applyAdjustmentDiff(billId, diff);
+  const previousClaims = await applyAdjustmentDiff(billId, diff);
   await pool.query(
-    `UPDATE bill_adjustments SET status = 'applied', reviewed_by_participant_id = $1, reviewed_at = now() WHERE id = $2`,
-    [reviewerParticipantId, adjustmentId]
+    `UPDATE bill_adjustments
+     SET status = 'applied', reviewed_by_participant_id = $1, reviewed_at = now(), previous_claims = $2
+     WHERE id = $3`,
+    [reviewerParticipantId, JSON.stringify(previousClaims), adjustmentId]
   );
 
   const state = await fetchFullBill(billId);
@@ -270,6 +273,33 @@ export function registerSocketHandlers(io) {
       }
 
       await applyAndBroadcastAdjustment(io, billId, diff, adjustmentId, participantId);
+    });
+
+    socket.on("adjustment:revert", async ({ adjustmentId }) => {
+      const { billId, participantId, isPayer } = socket.data;
+      if (!billId) return sendError(socket, "UNAUTHENTICATED", "Join the bill first");
+      if (!isPayer) return sendError(socket, "FORBIDDEN", "Only the payer can revert adjustments");
+
+      const applied = await pool.query(
+        `SELECT * FROM bill_adjustments WHERE id = $1 AND bill_id = $2 AND status = 'applied' AND reverted_at IS NULL`,
+        [adjustmentId, billId]
+      );
+      if (applied.rows.length === 0) {
+        return sendError(socket, "NOT_FOUND", "No applied (and not already reverted) adjustment with that id");
+      }
+
+      await revertToSnapshot(billId, applied.rows[0].previous_claims ?? []);
+      await pool.query(
+        `UPDATE bill_adjustments SET reverted_at = now(), reverted_by_participant_id = $1 WHERE id = $2`,
+        [participantId, adjustmentId]
+      );
+
+      const state = await fetchFullBill(billId);
+      const adjustment = state.adjustments.find((a) => a.id === adjustmentId);
+      io.to(`bill:${billId}`).emit("adjustment:reverted", {
+        adjustment,
+        updatedState: { items: state.items, claims: state.claims, totals: state.totals },
+      });
     });
   });
 }

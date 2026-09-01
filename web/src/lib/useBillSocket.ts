@@ -124,24 +124,29 @@ export function useBillSocket(billId: string | null, token: string | null) {
       );
     });
 
-    socket.on(
-      "adjustment:applied",
-      (payload: { adjustment: Adjustment; updatedState: { items: Item[]; claims: ItemClaim[]; totals: BillState["totals"] } }) => {
-        setState((prev) => {
-          if (!prev) return prev;
-          const adjustments = prev.adjustments.some((a) => a.id === payload.adjustment.id)
-            ? prev.adjustments.map((a) => (a.id === payload.adjustment.id ? payload.adjustment : a))
-            : [...prev.adjustments, payload.adjustment];
-          return {
-            ...prev,
-            adjustments,
-            items: payload.updatedState.items,
-            claims: payload.updatedState.claims,
-            totals: payload.updatedState.totals,
-          };
-        });
-      }
-    );
+    type AdjustmentResultPayload = {
+      adjustment: Adjustment;
+      updatedState: { items: Item[]; claims: ItemClaim[]; totals: BillState["totals"] };
+    };
+    const applyAdjustmentResult = (payload: AdjustmentResultPayload) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const adjustments = prev.adjustments.some((a) => a.id === payload.adjustment.id)
+          ? prev.adjustments.map((a) => (a.id === payload.adjustment.id ? payload.adjustment : a))
+          : [...prev.adjustments, payload.adjustment];
+        return {
+          ...prev,
+          adjustments,
+          items: payload.updatedState.items,
+          claims: payload.updatedState.claims,
+          totals: payload.updatedState.totals,
+        };
+      });
+    };
+    // Applying and reverting both replace items/claims/totals wholesale and
+    // upsert the same adjustment row - only the row's status/reverted_at differ.
+    socket.on("adjustment:applied", applyAdjustmentResult);
+    socket.on("adjustment:reverted", applyAdjustmentResult);
 
     socket.on("error", (payload: SocketError) => setError(payload));
 
@@ -175,6 +180,10 @@ export function useBillSocket(billId: string | null, token: string | null) {
     socketRef.current?.emit("adjustment:review", { adjustmentId, decision });
   }, []);
 
+  const revertAdjustment = useCallback((adjustmentId: string) => {
+    socketRef.current?.emit("adjustment:revert", { adjustmentId });
+  }, []);
+
   return {
     state,
     error,
@@ -185,5 +194,6 @@ export function useBillSocket(billId: string | null, token: string | null) {
     markPaid,
     proposeAdjustment,
     reviewAdjustment,
+    revertAdjustment,
   };
 }

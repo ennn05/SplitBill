@@ -47,23 +47,66 @@ export function validateAdjustmentDiff(diff, { items, participants }) {
   return { valid: true };
 }
 
-/** Applies an already-validated diff: for each operation, replaces that item's claims wholesale. */
+/** Replaces each operation's item claims wholesale, inside an already-open transaction. */
+async function replaceClaims(client, billId, operations) {
+  for (const op of operations) {
+    await client.query(
+      `DELETE FROM item_claims WHERE item_id = $1 AND item_id IN (SELECT id FROM items WHERE bill_id = $2)`,
+      [op.itemId, billId]
+    );
+    for (const claim of op.claims) {
+      await client.query(
+        `INSERT INTO item_claims (item_id, participant_id, share_fraction) VALUES ($1, $2, $3)`,
+        [op.itemId, claim.participantId, claim.shareFraction]
+      );
+    }
+  }
+}
+
+/**
+ * Applies an already-validated diff, first capturing a snapshot of each
+ * affected item's claims as they stood immediately before - in the same
+ * shape as diff.operations - so the change can be reverted later without
+ * needing to compute or trust an inverse diff. Returns that snapshot.
+ */
 export async function applyAdjustmentDiff(billId, diff) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    const previousClaims = [];
     for (const op of diff.operations) {
-      await client.query(
-        `DELETE FROM item_claims WHERE item_id = $1 AND item_id IN (SELECT id FROM items WHERE bill_id = $2)`,
-        [op.itemId, billId]
+      const existing = await client.query(
+        `SELECT participant_id, share_fraction FROM item_claims WHERE item_id = $1`,
+        [op.itemId]
       );
-      for (const claim of op.claims) {
-        await client.query(
-          `INSERT INTO item_claims (item_id, participant_id, share_fraction) VALUES ($1, $2, $3)`,
-          [op.itemId, claim.participantId, claim.shareFraction]
-        );
-      }
+      previousClaims.push({
+        itemId: op.itemId,
+        claims: existing.rows.map((r) => ({
+          participantId: r.participant_id,
+          shareFraction: Number(r.share_fraction),
+        })),
+      });
     }
+
+    await replaceClaims(client, billId, diff.operations);
+
+    await client.query("COMMIT");
+    return previousClaims;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** Restores claims to a previously-captured snapshot (see applyAdjustmentDiff). */
+export async function revertToSnapshot(billId, previousClaims) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await replaceClaims(client, billId, previousClaims);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");

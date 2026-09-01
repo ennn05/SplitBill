@@ -356,6 +356,7 @@ function LiveBillPanel({
         error={error}
         onPropose={liveActions.proposeAdjustment}
         onReview={liveActions.reviewAdjustment}
+        onRevert={liveActions.revertAdjustment}
       />
 
       <section>

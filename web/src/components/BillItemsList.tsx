@@ -5,8 +5,6 @@ import type { Item, ItemClaim, Participant } from "@/lib/types";
 import { claimedFractionByItem, isItemFullyClaimed } from "@/lib/claims";
 import { participantLabel } from "@/lib/participant";
 
-const SPLIT_OPTIONS = [1, 2, 3, 4, 5, 6, 8];
-
 export function BillItemsList({
   items,
   claims,
@@ -48,6 +46,7 @@ export function BillItemsList({
                 <ClaimControl
                   claimed={Boolean(myClaim)}
                   fullyClaimed={fullyClaimed && !myClaim}
+                  maxSplit={Math.max(participants.length, 1)}
                   onClaim={(fraction) => onClaim(item.id, fraction)}
                   onUnclaim={() => onUnclaim(item.id)}
                 />
@@ -78,15 +77,18 @@ export function BillItemsList({
 function ClaimControl({
   claimed,
   fullyClaimed,
+  maxSplit,
   onClaim,
   onUnclaim,
 }: {
   claimed: boolean;
   fullyClaimed: boolean;
+  maxSplit: number;
   onClaim: (fraction: number) => void;
   onUnclaim: () => void;
 }) {
   const [splitWays, setSplitWays] = useState(1);
+  const splitOptions = Array.from({ length: maxSplit }, (_, i) => i + 1);
 
   if (claimed) {
     return (
@@ -110,7 +112,7 @@ function ClaimControl({
         onChange={(e) => setSplitWays(Number(e.target.value))}
         className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs dark:border-slate-700 dark:bg-slate-800"
       >
-        {SPLIT_OPTIONS.map((n) => (
+        {splitOptions.map((n) => (
           <option key={n} value={n}>
             {n === 1 ? "Just me" : `Split ${n} ways`}
           </option>

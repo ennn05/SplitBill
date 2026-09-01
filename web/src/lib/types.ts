@@ -66,6 +66,8 @@ export interface Adjustment {
   structured_diff: { operations: unknown[]; summary: string };
   status: AdjustmentStatus;
   reviewed_by_participant_id: string | null;
+  reverted_at: string | null;
+  reverted_by_participant_id: string | null;
   created_at: string;
   reviewed_at: string | null;
 }

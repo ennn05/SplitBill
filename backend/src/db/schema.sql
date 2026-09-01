@@ -87,6 +87,13 @@ CREATE TABLE IF NOT EXISTS bill_adjustments (
   reviewed_at TIMESTAMPTZ
 );
 
+-- Snapshot of each affected item's claims immediately before this adjustment was
+-- applied (same shape as structured_diff.operations), so an applied adjustment can
+-- be reverted without needing to replay/inverse the diff itself.
+ALTER TABLE bill_adjustments ADD COLUMN IF NOT EXISTS previous_claims JSONB;
+ALTER TABLE bill_adjustments ADD COLUMN IF NOT EXISTS reverted_at TIMESTAMPTZ;
+ALTER TABLE bill_adjustments ADD COLUMN IF NOT EXISTS reverted_by_participant_id UUID REFERENCES participants(id);
+
 -- Manual payment confirmation (no real money movement in-app)
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
