@@ -178,31 +178,35 @@ Each bill has its own room: `bill:{bill_id}`. Guests authenticate the socket con
 
 ## 5. Phased Roadmap
 
-**Phase 1 — Core web app**
-- Firebase Auth (payer login) + Next.js scaffold on Vercel
+**Phase 1 — Core web app** ✅ done, deployed, and validated end-to-end on real infra (Vercel + Render + Supabase + Firebase + Gemini)
+- Firebase Auth (payer login: Google + email/password) + Next.js scaffold on Vercel
 - Backend on Render: Postgres schema above, REST endpoints for bills/items/participants/claims
 - Receipt upload → LLM extraction → editable review screen before publishing (rate-limited per user — each upload is a paid LLM call, so this needs abuse protection from day one, not deferred to Phase 4)
 - Join-by-link/code flow for guests (no login, session token)
 - Socket.io live claiming
 - Proportional tax/service-charge calculation, live running total per person
-- Payer uploads QR image (bank/TnG), guests see "you owe RM X"
+- Payer uploads QR image (bank/TnG), guests see "you owe RM X" — plus a saved default QR in Settings, reused across bills with a per-bill override
 - Manual "mark as paid" by payer
 
-**Phase 2 — Mobile app** *(starts only after Phase 1 is deployed and the core flow validated end-to-end on web — not built in parallel)*
+**Phase 2 — Mobile app** *(not started — deferred by choice; web (Phase 3/4) prioritized first)*
 - React Native (Expo) client reusing the same API/socket layer
 - Native camera capture for receipts
 - Push notifications (new claim, payment marked, someone joined)
 
-**Phase 3 — AI chatbox**
+**Phase 3 — AI chatbox** ✅ done, verified live against real Gemini/Postgres/Socket.io
 - Structured diff schema + validator (must reconcile totals, no orphaned claims)
 - Payer-initiated adjustments first (no approval flow needed)
 - Guest-suggested adjustments with approve/reject UI
 - Adjustment history log visible to all participants
 
 **Phase 4 — Polish**
-- Bill history/dashboard for the payer
-- Real DuitNow QR generation instead of image upload
-- Rate-limiting/abuse protection on guest join codes; link/code expiry
+- ✅ Bill history/dashboard for the payer
+- ⬛ Real DuitNow QR generation instead of image upload — **skipped by choice**: needs a registered DuitNow merchant ID (real bank/business integration), not buildable without that credential. Image upload is the permanent solution.
+- ✅ Rate-limiting/abuse protection on guest join codes; link/code expiry (short codes expire 30 min after publish; join link never expires on its own)
+
+**Also added along the way (not in the original plan):**
+- Dark mode following system color-scheme preference
+- Settings page for a reusable default payment QR
 
 ---
 
@@ -212,4 +216,6 @@ Each bill has its own room: `bill:{bill_id}`. Guests authenticate the socket con
 - **Unclaimed items / rounding remainders:** flagged for manual resolution, not silently absorbed. `bill:lock` is rejected while any item has `SUM(share_fraction) < 1`; the payer must explicitly resolve each one (assign to self, split evenly, or wait) before the bill can be locked and settled. See §2 step 7a and the `bill:lock` contract in §4.
 - **Join code security:** short codes are guessable; treat the join *link* (long random token) as primary, with the short code as a secondary/backup entry method that expires quickly.
 - **Guest session tokens:** hashed at rest, not stored raw. See `guest_session_token_hash` in §3 and the design note below it. Enables guest revocation without weakening the JWT's self-verifying property.
-- **Mobile build order:** Phase 2 (Expo) starts only after Phase 1 web is deployed and the core flow is validated live — not built in parallel, to avoid maintaining two clients against a schema that's still moving.
+- **Mobile build order:** Phase 2 (Expo) starts only after Phase 1 web is deployed and the core flow is validated live — not built in parallel, to avoid maintaining two clients against a schema that's still moving. Phase 1 is now done; Phase 3/4 web work was prioritized ahead of starting mobile.
+- **Chat adjustment scope:** LLM-driven diffs only reassign item claims (§4's `set_item_claims`-shaped operations) — adding/removing items or editing tax/service charge is out of scope for chat, since that touches receipt data that should stay under the payer's direct review in the edit screen, not a natural-language mutation. Uses Gemini (`gemini-flash-lite-latest`, falling back to `gemini-flash-latest` on transient overload) for consistency with receipt extraction, both free-tier.
+- **DuitNow QR:** stays on image upload permanently — generating a real DuitNow-standard QR needs a registered merchant ID (a real bank/business integration), which isn't obtainable without the user's own business credentials.
