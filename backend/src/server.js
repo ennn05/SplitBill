@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import { UPLOAD_DIR } from "./lib/storage.js";
 import billsRoutes from "./routes/bills.js";
 import joinRoutes from "./routes/join.js";
+import meRoutes from "./routes/me.js";
 import { registerSocketHandlers } from "./sockets/index.js";
 
 export async function buildServer() {
@@ -22,6 +23,7 @@ export async function buildServer() {
 
   await fastify.register(billsRoutes);
   await fastify.register(joinRoutes);
+  await fastify.register(meRoutes);
 
   fastify.get("/health", async () => ({ ok: true }));
 

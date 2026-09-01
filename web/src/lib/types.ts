@@ -61,6 +61,11 @@ export interface Payment {
   marked_paid_at: string | null;
 }
 
+export interface DefaultPaymentQr {
+  url: string;
+  methodType: "bank" | "tng";
+}
+
 export interface BillState {
   bill: Bill;
   items: Item[];
@@ -68,6 +73,15 @@ export interface BillState {
   claims: ItemClaim[];
   payments: Payment[];
   totals: { unresolvedItemIds: string[]; perParticipant: ParticipantTotal[] };
+  payerDefaultPaymentQr: DefaultPaymentQr | null;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string | null;
+  default_payment_qr_image_url: string | null;
+  default_payment_method_type: "bank" | "tng" | null;
 }
 
 export interface ExtractedItem {

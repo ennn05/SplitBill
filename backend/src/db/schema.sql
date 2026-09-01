@@ -10,6 +10,11 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- A saved default QR the payer can reuse across bills instead of re-uploading each time.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_payment_qr_image_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_payment_method_type TEXT
+  CHECK (default_payment_method_type IN ('bank','tng'));
+
 -- A single bill/session
 CREATE TABLE IF NOT EXISTS bills (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

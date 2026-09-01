@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/AuthContext";
 import { useBillSocket } from "@/lib/useBillSocket";
-import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr } from "@/lib/api";
+import { getBill, uploadReceipt, saveItems, publishBill, uploadPaymentQr, applyDefaultPaymentQr } from "@/lib/api";
 import { unresolvedItems } from "@/lib/claims";
 import { BillItemsList } from "@/components/BillItemsList";
 import type { BillState, ExtractedItem } from "@/lib/types";
@@ -67,7 +67,16 @@ export default function BillPage({ params }: { params: Promise<{ billId: string 
           onChanged={refresh}
         />
       ) : (
-        <LiveBillPanel state={live.state} error={live.error} liveActions={live} idToken={idToken!} billId={billId} onQrUploaded={refresh} bill={restState.bill} />
+        <LiveBillPanel
+          state={live.state}
+          error={live.error}
+          liveActions={live}
+          idToken={idToken!}
+          billId={billId}
+          onQrUploaded={refresh}
+          bill={restState.bill}
+          payerDefaultPaymentQr={restState.payerDefaultPaymentQr}
+        />
       )}
     </main>
   );
@@ -264,6 +273,7 @@ function LiveBillPanel({
   billId,
   bill,
   onQrUploaded,
+  payerDefaultPaymentQr,
 }: {
   state: ReturnType<typeof useBillSocket>["state"];
   error: ReturnType<typeof useBillSocket>["error"];
@@ -272,9 +282,11 @@ function LiveBillPanel({
   billId: string;
   bill: BillState["bill"];
   onQrUploaded: () => void;
+  payerDefaultPaymentQr: BillState["payerDefaultPaymentQr"];
 }) {
   const [qrMethod, setQrMethod] = useState<"bank" | "tng">("bank");
   const [qrUploading, setQrUploading] = useState(false);
+  const [showUploadInstead, setShowUploadInstead] = useState(false);
 
   const joinUrl = typeof window !== "undefined" ? `${window.location.origin}/join/${bill.join_link_token}` : "";
 
@@ -282,6 +294,16 @@ function LiveBillPanel({
     setQrUploading(true);
     try {
       await uploadPaymentQr(idToken, billId, file, qrMethod);
+      onQrUploaded();
+    } finally {
+      setQrUploading(false);
+    }
+  }
+
+  async function handleUseDefault() {
+    setQrUploading(true);
+    try {
+      await applyDefaultPaymentQr(idToken, billId);
       onQrUploaded();
     } finally {
       setQrUploading(false);
@@ -354,28 +376,66 @@ function LiveBillPanel({
         </ul>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-medium text-slate-700">Payment QR</h2>
+      <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Payment QR</h2>
         {bill.payment_qr_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={bill.payment_qr_image_url} alt="Payment QR" className="h-40 w-40 object-contain" />
-        ) : (
-          <div className="flex items-center gap-2">
-            <select
-              value={qrMethod}
-              onChange={(e) => setQrMethod(e.target.value as "bank" | "tng")}
-              className="rounded border border-slate-300 px-2 py-1 text-sm"
+          <img
+            src={bill.payment_qr_image_url}
+            alt="Payment QR"
+            className="h-40 w-40 rounded bg-white object-contain p-2"
+          />
+        ) : payerDefaultPaymentQr && !showUploadInstead ? (
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={payerDefaultPaymentQr.url}
+                alt="Your default payment QR"
+                className="h-16 w-16 rounded bg-white object-contain p-1"
+              />
+              <button
+                onClick={handleUseDefault}
+                disabled={qrUploading}
+                className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              >
+                {qrUploading ? "Applying…" : "Use my default QR"}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowUploadInstead(true)}
+              className="text-xs text-slate-500 hover:underline dark:text-slate-400"
             >
-              <option value="bank">Bank transfer</option>
-              <option value="tng">Touch &apos;n Go</option>
-            </select>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={qrUploading}
-              onChange={(e) => e.target.files?.[0] && handleQrUpload(e.target.files[0])}
-              className="text-sm"
-            />
+              Or upload a different QR for this bill
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-center gap-2">
+              <select
+                value={qrMethod}
+                onChange={(e) => setQrMethod(e.target.value as "bank" | "tng")}
+                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+              >
+                <option value="bank">Bank transfer</option>
+                <option value="tng">Touch &apos;n Go</option>
+              </select>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={qrUploading}
+                onChange={(e) => e.target.files?.[0] && handleQrUpload(e.target.files[0])}
+                className="text-sm"
+              />
+            </div>
+            {payerDefaultPaymentQr && (
+              <button
+                onClick={() => setShowUploadInstead(false)}
+                className="text-xs text-slate-500 hover:underline dark:text-slate-400"
+              >
+                Use my default QR instead
+              </button>
+            )}
           </div>
         )}
       </section>

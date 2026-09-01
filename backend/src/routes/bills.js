@@ -25,6 +25,15 @@ const editItemsSchema = z.object({
 const paymentQrSchema = z.object({ methodType: z.enum(["bank", "tng"]) });
 
 export default async function billsRoutes(fastify) {
+  // List the payer's own bills, newest first - for the dashboard's bill history.
+  fastify.get("/api/bills", { preHandler: requirePayerAuth }, async (request, reply) => {
+    const result = await pool.query(
+      "SELECT * FROM bills WHERE owner_user_id = $1 ORDER BY created_at DESC",
+      [request.payerUserId]
+    );
+    return reply.send(result.rows);
+  });
+
   // Create a draft bill
   fastify.post("/api/bills", { preHandler: requirePayerAuth }, async (request, reply) => {
     const parsed = createBillSchema.safeParse(request.body ?? {});
@@ -152,10 +161,45 @@ export default async function billsRoutes(fastify) {
     return reply.send(updated.rows[0]);
   });
 
-  fastify.get("/api/bills/:billId", { preHandler: requirePayerAuth }, async (request, reply) => {
+  // Copies the payer's saved default QR (see routes/me.js) onto this bill, so they
+  // don't have to re-upload the same QR image for every new bill.
+  fastify.post(
+    "/api/bills/:billId/use-default-payment",
+    { preHandler: [requirePayerAuth, requireBillOwner] },
+    async (request, reply) => {
+      const owner = await pool.query(
+        "SELECT default_payment_qr_image_url, default_payment_method_type FROM users WHERE id = $1",
+        [request.payerUserId]
+      );
+      const { default_payment_qr_image_url, default_payment_method_type } = owner.rows[0] ?? {};
+      if (!default_payment_qr_image_url) {
+        return reply.code(400).send({ code: "NO_DEFAULT_QR", message: "No default payment QR set in Settings" });
+      }
+
+      const updated = await pool.query(
+        `UPDATE bills SET payment_qr_image_url = $1, payment_method_type = $2 WHERE id = $3 RETURNING *`,
+        [default_payment_qr_image_url, default_payment_method_type, request.params.billId]
+      );
+      return reply.send(updated.rows[0]);
+    }
+  );
+
+  fastify.get("/api/bills/:billId", { preHandler: [requirePayerAuth, requireBillOwner] }, async (request, reply) => {
     const bill = await fetchFullBill(request.params.billId);
     if (!bill) return reply.code(404).send({ code: "NOT_FOUND", message: "Bill not found" });
-    return reply.send(bill);
+
+    const owner = await pool.query(
+      "SELECT default_payment_qr_image_url, default_payment_method_type FROM users WHERE id = $1",
+      [request.payerUserId]
+    );
+    const payerDefaultPaymentQr = owner.rows[0]?.default_payment_qr_image_url
+      ? {
+          url: owner.rows[0].default_payment_qr_image_url,
+          methodType: owner.rows[0].default_payment_method_type,
+        }
+      : null;
+
+    return reply.send({ ...bill, payerDefaultPaymentQr });
   });
 
   fastify.post(

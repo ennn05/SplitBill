@@ -1,4 +1,4 @@
-import type { Bill, BillState, ExtractedItem, ExtractedReceipt } from "./types";
+import type { Bill, BillState, ExtractedItem, ExtractedReceipt, UserProfile } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
@@ -20,6 +20,11 @@ export async function createBill(idToken: string, title?: string): Promise<Bill>
     headers: { ...authHeaders(idToken), "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
   });
+  return handle(res);
+}
+
+export async function getBills(idToken: string): Promise<Bill[]> {
+  const res = await fetch(`${API_BASE}/api/bills`, { headers: authHeaders(idToken) });
   return handle(res);
 }
 
@@ -77,6 +82,35 @@ export async function uploadPaymentQr(
     method: "POST",
     headers: authHeaders(idToken),
     body: formData,
+  });
+  return handle(res);
+}
+
+export async function getMe(idToken: string): Promise<UserProfile> {
+  const res = await fetch(`${API_BASE}/api/me`, { headers: authHeaders(idToken) });
+  return handle(res);
+}
+
+export async function uploadDefaultPaymentQr(
+  idToken: string,
+  file: File,
+  methodType: "bank" | "tng"
+): Promise<UserProfile> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("methodType", methodType);
+  const res = await fetch(`${API_BASE}/api/me/payment-qr`, {
+    method: "POST",
+    headers: authHeaders(idToken),
+    body: formData,
+  });
+  return handle(res);
+}
+
+export async function applyDefaultPaymentQr(idToken: string, billId: string): Promise<Bill> {
+  const res = await fetch(`${API_BASE}/api/bills/${billId}/use-default-payment`, {
+    method: "POST",
+    headers: authHeaders(idToken),
   });
   return handle(res);
 }
