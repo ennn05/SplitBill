@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS bills (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- The short join_code is guessable (see SplitBillplan.md section 6) and expires
+-- shortly after publish; the long join_link_token has no expiry of its own.
+ALTER TABLE bills ADD COLUMN IF NOT EXISTS join_code_expires_at TIMESTAMPTZ;
+
 -- Line items extracted from the receipt
 CREATE TABLE IF NOT EXISTS items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

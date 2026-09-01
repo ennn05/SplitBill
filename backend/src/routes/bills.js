@@ -136,7 +136,8 @@ export default async function billsRoutes(fastify) {
       return reply.code(400).send({ code: "NO_ITEMS", message: "Add at least one item before publishing" });
     }
     const updated = await pool.query(
-      `UPDATE bills SET status = 'open' WHERE id = $1 AND status = 'draft' RETURNING *`,
+      `UPDATE bills SET status = 'open', join_code_expires_at = now() + interval '30 minutes'
+       WHERE id = $1 AND status = 'draft' RETURNING *`,
       [request.params.billId]
     );
     if (updated.rows.length === 0) {
